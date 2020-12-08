@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   db:
+    container_name: db
     image: mariadb:10.2.33
     volumes:
       - db-data:/var/lib/mysql
@@ -11,19 +12,30 @@ services:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_520_ci"]
 
   wordpress:
+    container_name: wordpress
+    hostname: wp # real hostname here
     image: wordpress:5.5.3-php7.4-apache
     depends_on:
       - db
     ports:
       - "8000:80"
+    volumes:
+      - ./wp-data:/var/www/html
     restart: unless-stopped
     environment:
       WORDPRESS_DB_HOST: db:3306
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_CHARSET: utf8mb4
+      WORDPRESS_DB_COLLATE: utf8mb4_unicode_520_ci
+      # WORDPRESS_TABLE_PREFIX: wp_
+      # WORDPRESS_WP_SITEURL: "http://192.168.8.243:8000" # won't work with existed site
+      # WORDPRESS_WP_HOME: "http://192.168.8.243:8000" # won't work with existed site
+      # WORDPRESS_WPLANG: en_US # deprecated
 
 volumes:
   db-data: {}
