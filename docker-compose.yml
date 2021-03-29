@@ -1,5 +1,12 @@
 version: '3.8'
 
+x-logging:
+  &default-logging
+  driver: json-file
+  options:
+    max-size: 100m
+    max-file: "10"
+
 services:
   db:
     container_name: db
@@ -13,15 +20,16 @@ services:
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_520_ci"]
+    logging: *default-logging
 
   wordpress:
     container_name: wordpress
     hostname: wp # real hostname here
-    image: wordpress:5.5.3-php7.4-apache
+    image: wordpress:5.7-php7.4-apache
     depends_on:
       - db
     ports:
-      - "8000:80"
+      - "80:80"
     volumes:
       - ./wp-data:/var/www/html
     restart: unless-stopped
@@ -32,10 +40,11 @@ services:
       WORDPRESS_DB_PASSWORD: wordpress
       WORDPRESS_DB_CHARSET: utf8mb4
       WORDPRESS_DB_COLLATE: utf8mb4_unicode_520_ci
-      # WORDPRESS_TABLE_PREFIX: wp_
-      # WORDPRESS_WP_SITEURL: "http://192.168.8.243:8000" # won't work with existed site
-      # WORDPRESS_WP_HOME: "http://192.168.8.243:8000" # won't work with existed site
+      WORDPRESS_TABLE_PREFIX: wp_
+      WORDPRESS_WP_SITEURL: "http://127.0.0.1" # won't work with existed site
+      WORDPRESS_WP_HOME: "http://127.0.0.1" # won't work with existed site
       # WORDPRESS_WPLANG: en_US # deprecated
+    logging: *default-logging
 
 volumes:
   db-data: {}
