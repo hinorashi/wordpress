@@ -10,7 +10,7 @@ x-logging:
 services:
   db:
     container_name: db
-    image: mariadb:10.2.33
+    image: mariadb:10.5
     ports:
       - "3306:3306"
     volumes:
@@ -32,8 +32,8 @@ services:
     image: wordpress:5.7-php7.4-apache
     depends_on:
       - db
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     volumes:
       - ./wp-data:/var/www/html
     restart: unless-stopped
@@ -48,6 +48,25 @@ services:
       WORDPRESS_WP_SITEURL: "http://${DOMAIN_NAME}" # won't work with existed site
       WORDPRESS_WP_HOME: "http://${DOMAIN_NAME}" # won't work with existed site
     logging: *default-logging
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.19
+    depends_on:
+      - wordpress
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl.conf.template:/etc/nginx/templates/ssl.conf.template
+      - ./cert/server.crt:/etc/ssl/certs/server.crt
+      - ./cert/server.key:/etc/ssl/private/server.key
+    working_dir: /etc/nginx
+    # disabled apache2 access log, use nginx instead with real IP module
+    logging: *default-logging
+      #driver: none
 
 volumes:
   db-data: {}
