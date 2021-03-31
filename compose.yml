@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 
 x-logging:
   &default-logging
@@ -8,30 +8,64 @@ x-logging:
     max-file: "10"
 
 services:
-  db:
-    container_name: db
-    image: mariadb:10.5
+
+  mariadb:
+    container_name: mariadb
+    image: mariadb:10.5.9
+    profiles:
+      - mariadb
     ports:
       - "3306:3306"
     volumes:
-      - db-data:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD:
+      MYSQL_DATABASE:
+      MYSQL_USER:
+      MYSQL_PASSWORD:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_520_ci
     logging: *default-logging
+    networks:
+      wp-net:
+        aliases:
+          - db
+
+  mysql:
+    container_name: mysql
+    image: mysql:8.0.23
+    profiles:
+      - mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD:
+      MYSQL_DATABASE:
+      MYSQL_USER:
+      MYSQL_PASSWORD:
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_520_ci
+    cap_add:
+      - SYS_NICE # CAP_SYS_NICE, fix mbind permission issue
+    logging: *default-logging
+    networks:
+      wp-net:
+        aliases:
+          - db
 
   wordpress:
     container_name: wordpress
     hostname: "${DOMAIN_NAME}" # avoid warning from apache
-    image: wordpress:5.7-php7.4-apache
-    depends_on:
-      - db
+    image: wordpress:5.7.0-php7.4-apache
+    #depends_on:
+      #- mysql
+      #- mariadb
     expose:
       - "80"
     volumes:
@@ -40,19 +74,21 @@ services:
     restart: unless-stopped
     environment:
       WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_NAME: wordpress
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: $MYSQL_DATABASE
+      WORDPRESS_DB_USER: $MYSQL_USER
+      WORDPRESS_DB_PASSWORD: $MYSQL_PASSWORD
       WORDPRESS_DB_CHARSET: utf8mb4
       WORDPRESS_DB_COLLATE: utf8mb4_unicode_520_ci
       WORDPRESS_TABLE_PREFIX: wp_
       WORDPRESS_WP_SITEURL: "http://${DOMAIN_NAME}" # won't work with existed site
       WORDPRESS_WP_HOME: "http://${DOMAIN_NAME}" # won't work with existed site
     logging: *default-logging
+    networks:
+      wp-net: {}
 
   nginx:
     container_name: nginx
-    image: nginx:1.19
+    image: nginx:1.19.9
     depends_on:
       - wordpress
     ports:
@@ -68,7 +104,13 @@ services:
     # disabled nginx access log to avoid duplication with apache2
     logging: #*default-logging
       driver: none
+    networks:
+      wp-net: {}
 
 volumes:
-  db-data: {}
+  mariadb-data: {}
+  mysql-data: {}
+
+networks:
+  wp-net: {}
 
