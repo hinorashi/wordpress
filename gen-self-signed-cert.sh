@@ -1,10 +1,30 @@
 #!/bin/bash
 
-# find the IP addr yourself, it depends on which interface you would access
-[[ -z $1 ]] && IP_ADDR='127.0.0.1' || IP_ADDR=$1
-echo 'domain name: '$IP_ADDR
+# argument(s):
+# $1: SSL cert Common Name (CN)
+# tips: find your IP addr that's reachable from your client (e.g. 192.168.1.69)
 
-openssl req -x509 -days 36500 -out cert/server.crt -subj /CN=$IP_ADDR \
+# CN via argument is prioritized
+if [[ -n $1 ]]; then
+  COMMON_NAME=$1
+
+# then defined variable in .env
+else
+  # read .env
+  source .env
+  if [[ -v DOMAIN_NAME ]]; then
+    COMMON_NAME=$DOMAIN_NAME
+
+  # otherwise fallback to loopback
+  else
+    COMMON_NAME='127.0.0.1'
+  fi
+fi
+
+echo 'domain name: '$COMMON_NAME
+
+mkdir -p cert
+openssl req -x509 -days 36500 -out cert/server.crt -subj /CN=$COMMON_NAME \
   -newkey rsa:2048 -nodes -keyout cert/server.key
 
 # verify
