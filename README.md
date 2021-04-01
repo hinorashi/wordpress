@@ -60,19 +60,34 @@ sudo rm -rf wp-data/* && sudo rm -f wp-data/.htaccess && ll wp-data/
 ```
 
 ## Tricks
+#### wp-cli
 Play with wp-cli: https://developer.wordpress.org/cli/commands/
 
-#### User
+User:
 ```bash
 docker-compose run --rm wp-cli user list
 docker-compose run --rm wp-cli user create yasuo yasuo@hino.io --role=administrator --user_pass=secret
 ```
-
-#### Config and Option
+Config and Option:
 ```bash
 docker-compose run --rm wp-cli config list
 docker-compose run --rm wp-cli option get home
 docker-compose run --rm wp-cli option get siteurl
 docker-compose run --rm wp-cli option set home http://<home>
 docker-compose run --rm wp-cli option set siteurl http://<site-url>
+```
+
+#### mariadb (or mysql)
+Show tables:
+```bash
+docker exec -it mariadb mysql -proot -Dwordpress -e 'show tables;'
+```
+Dump data:
+```bash
+docker exec -it mariadb mysqldump -hmariadb -uroot -proot -B wordpress --single-transaction --no-create-db > dump.sql
+docker exec -it mariadb sh -c 'mysqldump -hmariadb -uroot -p"$MYSQL_ROOT_PASSWORD" -B wordpress --single-transaction --no-create-db' > dump.sql
+```
+Restore data:
+```bash
+cat dump.sql | docker exec -i mariadb mysql -uroot -Dwordpress -proot
 ```
