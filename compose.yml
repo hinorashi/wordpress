@@ -7,7 +7,17 @@ x-logging:
     max-size: 100m
     max-file: "10"
 
+# shared environment variables between wordpress and wp-cli
+x-wp-env:
+  &wordpress-environment
+  WORDPRESS_DB_HOST: db:3306
+  WORDPRESS_DB_NAME: $MYSQL_DATABASE
+  WORDPRESS_DB_USER: $MYSQL_USER
+  WORDPRESS_DB_PASSWORD: $MYSQL_PASSWORD
+
 services:
+
+  # MARIADB ============================================================================================ #
 
   mariadb:
     container_name: mariadb
@@ -18,7 +28,7 @@ services:
       - "3306:3306"
     volumes:
       - mariadb-data:/var/lib/mysql
-    restart: unless-stopped
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD:
       MYSQL_DATABASE:
@@ -33,6 +43,8 @@ services:
         aliases:
           - db
 
+  # MYSQL ============================================================================================== #
+
   mysql:
     container_name: mysql
     image: mysql:8.0.23
@@ -42,7 +54,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-    restart: unless-stopped
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD:
       MYSQL_DATABASE:
@@ -59,6 +71,8 @@ services:
         aliases:
           - db
 
+  # WORDPRESS ========================================================================================== #
+
   wordpress:
     container_name: wordpress
     hostname: "${DOMAIN_NAME}" # avoid warning from apache
@@ -71,12 +85,9 @@ services:
     volumes:
       - ./apache2/000-default.conf:/etc/apache2/sites-available/000-default.conf
       - ./wp-data:/var/www/html
-    restart: unless-stopped
+    restart: always
     environment:
-      WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_NAME: $MYSQL_DATABASE
-      WORDPRESS_DB_USER: $MYSQL_USER
-      WORDPRESS_DB_PASSWORD: $MYSQL_PASSWORD
+      << : *wordpress-environment
       WORDPRESS_DB_CHARSET: utf8mb4
       WORDPRESS_DB_COLLATE: utf8mb4_unicode_520_ci
       WORDPRESS_TABLE_PREFIX: wp_
@@ -86,6 +97,8 @@ services:
     networks:
       wp-net: {}
 
+  # NGINX ============================================================================================== #
+
   nginx:
     container_name: nginx
     image: nginx:1.19.9
@@ -94,7 +107,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    restart: unless-stopped
+    restart: always
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/ssl.conf.template:/etc/nginx/templates/ssl.conf.template
@@ -106,6 +119,35 @@ services:
       driver: none
     networks:
       wp-net: {}
+
+  # WP-CLI ============================================================================================= #
+
+  # TODO automate wp installation
+  wp-cli:
+    container_name: wp-cli
+    image: wordpress:cli-2.4.0-php7.4
+    profiles:
+      - auto-config # for now, prevent this container from running automatically
+    depends_on:
+      - wordpress
+    volumes:
+      - ./wp-data:/var/www/html # shared with wordpress
+    user: "33"
+    command: >
+      wp core install
+      --path="/var/www/html"
+      --url="http://${DOMAIN_NAME}"
+      --title="Deathnote"
+      --admin_user=hino
+      --admin_password=password
+      --admin_email=hino@hino.io
+      --skip-email
+    environment: *wordpress-environment
+    logging: *default-logging
+    networks:
+      wp-net: {}
+
+  # END ================================================================================================ #
 
 volumes:
   mariadb-data: {}
