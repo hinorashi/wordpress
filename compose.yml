@@ -11,9 +11,9 @@ x-logging:
 x-wp-env:
   &wordpress-environment
   WORDPRESS_DB_HOST: db:3306
-  WORDPRESS_DB_NAME: $MYSQL_DATABASE
-  WORDPRESS_DB_USER: $MYSQL_USER
-  WORDPRESS_DB_PASSWORD: $MYSQL_PASSWORD
+  WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+  WORDPRESS_DB_USER: ${MYSQL_USER}
+  WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
 
 services:
 
@@ -27,7 +27,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mariadb-data:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql/
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD:
@@ -53,7 +53,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql/
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD:
@@ -77,14 +77,11 @@ services:
     container_name: wordpress
     hostname: "${DOMAIN_NAME}" # avoid warning from apache
     image: wordpress:5.7.0-php7.4-apache
-    #depends_on:
-      #- mysql
-      #- mariadb
     expose:
       - "80"
     volumes:
       - ./apache2/000-default.conf:/etc/apache2/sites-available/000-default.conf
-      - ./wp-data:/var/www/html
+      - ./wp-data/:/var/www/html/
     restart: always
     environment:
       << : *wordpress-environment
@@ -114,7 +111,7 @@ services:
       - ./cert/server.crt:/etc/ssl/certs/server.crt
       - ./cert/server.key:/etc/ssl/private/server.key
     working_dir: /etc/nginx
-    # disabled nginx access log to avoid duplication with apache2
+    # disable nginx access log to avoid duplication with apache2
     logging: #*default-logging
       driver: none
     networks:
@@ -122,25 +119,26 @@ services:
 
   # WP-CLI ============================================================================================= #
 
-  # TODO automate wp installation
   wp-cli:
     container_name: wp-cli
     image: wordpress:cli-2.4.0-php7.4
     profiles:
-      - auto-config # for now, prevent this container from running automatically
+      - auto-config # run the standard wordpress installation process automatically
     depends_on:
       - wordpress
     volumes:
-      - ./wp-data:/var/www/html # shared with wordpress
+      - ./wait-for-mysql.sh:/wait-for-mysql.sh
+      - ./wp-data:/var/www/html/ # shared with wordpress service
     user: "33"
     command: >
+      /wait-for-mysql.sh
       wp core install
       --path="/var/www/html"
-      --url="http://${DOMAIN_NAME}"
-      --title="Deathnote"
-      --admin_user=hino
-      --admin_password=password
-      --admin_email=hino@hino.io
+      --url="http://${DOMAIN_NAME:?}"
+      --title=${WP_TITLE:?don't be nameless}
+      --admin_user=${WP_ADMIN_USER:?are you sure to install wordpress without any admin user?}
+      --admin_password=${WP_ADMIN_PASSWORD}
+      --admin_email=${WP_ADMIN_EMAIL:?}
       --skip-email
     environment: *wordpress-environment
     logging: *default-logging
