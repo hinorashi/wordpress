@@ -22,41 +22,35 @@ Or just leave it as is, I had prepared self-signed cert for `127.0.0.1`.
 
 In case of prod, update your public `DOMAIN_NAME` in [.env](.env), put your cert stuffs into [cert/](cert/).
 
+#### (Optional) Automate wordpress installation
+This project automates the standard wordpress installation process by default, see [.env](.env):
+```properties
+COMPOSE_PROFILES=mariadb,auto-config
+```
+Check this part in [.env](.env) as well, update your preferences:
+```properties
+# wordpress config
+WP_TITLE=Deathnote
+WP_ADMIN_USER=hino
+WP_ADMIN_PASSWORD=password
+WP_ADMIN_EMAIL=hino@hino.io
+```
+
+In case you want to run the installation process manually, update your [.env](.env):
+```diff
+-COMPOSE_PROFILES=mariadb,auto-config
++COMPOSE_PROFILES=mariadb
+```
+Then you can access the home page and be redirected to the installation page, i.e. `http://<home>/wp-admin/install.php`
+
 #### Deploy
 ```bash
 docker-compose up -d && docker-compose logs -f
 ```
 
-#### (To be optimized) Wordpress installation
-Check this part in `compose.yml`, update your preferences (refer: https://developer.wordpress.org/cli/commands/core/install/):
-```yml
-services:
-  wp-cli:
-    command: >
-      wp core install
-      --path="/var/www/html"
-      --url="http://${DOMAIN_NAME}"
-      --title="Deathnote"
-      --admin_user=hino
-      --admin_password=password
-      --admin_email=hino@hino.io
-      --skip-email
-```
-Then run this:
-```bash
-docker-compose run --rm wp-cli
-```
-What you should see:
-```properties
-Creating wp_wp-cli_run ... done
-Success: WordPress installed successfully.
-```
-Or you can access the installation page, e.g. `http://<home>/wp-admin/install.php`
-
 #### Burn them all
 ```bash
-docker-compose down -v --remove-orphans
-sudo rm -rf wp-data/* && sudo rm -f wp-data/.htaccess && ll wp-data/
+docker-compose down -v --remove-orphans && sudo rm -rf wp-data/
 ```
 
 ## Tricks
@@ -77,7 +71,7 @@ docker-compose run --rm wp-cli option set home http://<home>
 docker-compose run --rm wp-cli option set siteurl http://<site-url>
 ```
 
-#### mariadb (or mysql)
+#### mariadb (or even mysql)
 Show tables:
 ```bash
 docker exec -it mariadb mysql -proot -Dwordpress -e 'show tables;'
