@@ -1,5 +1,5 @@
-## Note
-#### Versions in use
+## A. Intro
+#### 1. Versions in use
 | Component | Version  |
 | ---       | ---      |
 | docker    | 20.10    |
@@ -12,8 +12,8 @@
 | mariadb   | 10.5     |
 | mysql     | 8.0      |
 
-## How to use
-#### (Optional) Domain name & SSL cert
+## B. How to use
+#### 1. (Optional) Domain name & SSL cert
 In case of local deployment, find your local IP addr, set it as your `DOMAIN_NAME` in [.env](.env) and run this:
 ```bash
 ./gen-self-signed-cert.sh
@@ -22,7 +22,7 @@ Or just leave it as is, I had prepared self-signed cert for `127.0.0.1`.
 
 In case of prod, update your public `DOMAIN_NAME` in [.env](.env), put your cert stuffs into [cert/](cert/).
 
-#### (Optional) Automate wordpress installation
+#### 2. (Optional) Automate wordpress installation
 This project automates the standard wordpress installation process by default, see [.env](.env):
 ```properties
 COMPOSE_PROFILES=mariadb,auto-config
@@ -43,18 +43,18 @@ In case you want to run the installation process manually, update your [.env](.e
 ```
 Then you can access the home page and be redirected to the installation page, i.e. `http://<home>/wp-admin/install.php`
 
-#### Deploy
+#### 3. Deploy
 ```bash
 docker-compose up -d && docker-compose logs -f
 ```
 
-#### Burn them all
+#### 4. Burn them all
 ```bash
 docker-compose down -v --remove-orphans && sudo rm -rf wp-data/
 ```
 
-## Tricks
-#### wp-cli
+## C. Tricks
+#### 1. Wp-cli
 Play with wp-cli: https://developer.wordpress.org/cli/commands/
 
 User:
@@ -71,7 +71,7 @@ docker-compose run --rm wp-cli option set home http://<home>
 docker-compose run --rm wp-cli option set siteurl http://<site-url>
 ```
 
-#### mariadb (or even mysql)
+#### 2. MariaDB (or even MySQL)
 Show tables:
 ```bash
 docker exec -it mariadb mysql -proot -Dwordpress -e 'show tables;'
@@ -85,3 +85,13 @@ Restore data:
 ```bash
 cat dump.sql | docker exec -i mariadb mysql -uroot -Dwordpress -proot
 ```
+
+#### 3. Images link broken
+```sql
+UPDATE wp_posts SET post_content = REPLACE(post_content, 'oldurl', 'newurl');
+UPDATE wp_posts SET guid = REPLACE(guid, 'oldurl', 'newurl'); # maybe no need
+UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, 'oldurl', 'newurl'); # maybe no need
+```
+
+#### 4. Add a favicon
+Sauce: https://wordpress.org/support/article/creating-a-favicon/
